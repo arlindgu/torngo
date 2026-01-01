@@ -1,3 +1,4 @@
-.vscode
-.DS_Store
+#IGNORE
 
+/.vscode
+.DS_Store

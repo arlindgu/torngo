@@ -2,39 +2,17 @@ package main
 
 import (
 	"fmt"
-	"time"
 	"torngo/internal/api"
 	"torngo/internal/api/user"
 )
 
 func main() {
+	session := api.NewSession("cl8xxMu2j7GkLdKT")
 
-	var ts int64 = time.Now().Unix()
-
-	//TornGO Wrapper
-	// Create URL
-	respurl, urlerr := user.CreateAmmoURL(&user.UserAmmoParams{
-		BaseParams: api.BaseParams{
-			APIKey:    "▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓",
-			Timestamp: int(ts),
-			Comment:   "TornGO AmmoRequest",
-		},
-	})
-	if urlerr != nil {
-		panic(urlerr)
+	params := &user.UserBasicIdParams{
+		DiscordId: 714144254003249263,
+		Comment:   "Fetching basic user info",
 	}
-	fmt.Println("Generated URL:", respurl)
-
-	//Skip URLCreation and do GET Request in one function
-	ammoResp, resperr := user.GetAmmo(&user.UserAmmoParams{
-		BaseParams: api.BaseParams{
-			APIKey:    "▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓",
-			Timestamp: int(ts),
-			Comment:   "TornGO AmmoRequest",
-		},
-	})
-	if resperr != nil {
-		panic(resperr)
-	}
-	fmt.Printf("Ammo Response: %+v\n", ammoResp.Ammo)
+	basicResponse, err := user.GetBasicId(session, params)
+	fmt.Println(basicResponse.Profile.Name, err)
 }

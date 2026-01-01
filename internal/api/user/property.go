@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -37,31 +36,21 @@ type UserPropertyResponse struct {
 }
 
 type UserPropertyParams struct {
-	api.BaseParams
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreatePropertyURL(t *UserPropertyParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserPropertyParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
+
+func GetProperty(session *api.Session, params *UserPropertyParams) (*UserPropertyResponse, error) {
+	var resp UserPropertyResponse
+	if err := session.Get("user/property", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "property")
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

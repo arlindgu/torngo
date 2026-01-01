@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -64,54 +63,37 @@ type UserAttacksResponse struct {
 type UserAttacksFilter string
 
 const (
-	AttacksIncoming UserAttacksFilter = "incoming"
-	AttacksOutgoing UserAttacksFilter = "outgoing"
-	AttacksIDFilter UserAttacksFilter = "idFilter"
+	UserAttacksIncoming UserAttacksFilter = "incoming"
+	UserAttacksOutgoing UserAttacksFilter = "outgoing"
+	UserAttacksIDFilter UserAttacksFilter = "idFilter"
 )
 
 type UserAttacksParams struct {
-	api.BaseParams
-	Filter UserAttacksFilter
-	Limit  int
-	Sort   api.SortParams
-	api.RangeParams
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
+	Filter    UserAttacksFilter
+	Limit     api.ApiLimit
+	From      api.ApiFrom
+	To        api.ApiTo
+	Sort      api.ApiSort
 }
 
-func CreateAttacksURL(t *UserAttacksParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserAttacksParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	api.SetIfNotZero(q, "filter", string(p.Filter))
+	api.SetIfNotZero(q, "limit", int(p.Limit))
+	api.SetIfNotZero(q, "from", int(p.From))
+	api.SetIfNotZero(q, "to", int(p.To))
+	api.SetIfNotZero(q, "sort", string(p.Sort))
+	return q
+}
+
+func GetAttacks(session *api.Session, params *UserAttacksParams) (*UserAttacksResponse, error) {
+	var resp UserAttacksResponse
+	if err := session.Get("user/attacks", params, &resp); err != nil {
+		return nil, err
 	}
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "attacks")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Filter != "" {
-		q.Set("filter", string(t.Filter))
-	}
-
-	api.SetLimitParams(q, t.Limit, 20)
-
-	if err := api.SetRangeParams(q, t.From, t.To); err != nil {
-		return "", err
-	}
-
-	if t.Sort != "" {
-		q.Set("sort", string(t.Sort))
-	}
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

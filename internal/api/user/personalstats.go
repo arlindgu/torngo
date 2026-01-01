@@ -3,8 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
-	"strings"
 	"torngo/internal/api"
 )
 
@@ -465,47 +463,27 @@ const (
 )
 
 type UserPersonalstatsParams struct {
-	Cat  []UserPersonalstatsCategory
-	Stat UserPersonalstatsStat
-	api.BaseParams
+	Cat       []UserPersonalstatsCategory
+	Stat      UserPersonalstatsStat
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreatePersonalstatsURL(t *UserPersonalstatsParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserPersonalstatsParams) EncodeParams() url.Values {
+	q := url.Values{}
+	for _, cat := range p.Cat {
+		api.SetIfNotZero(q, "cat", string(cat))
 	}
+	api.SetIfNotZero(q, "stat", string(p.Stat))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
 
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
+func GetPersonalstats(session *api.Session, params *UserPersonalstatsParams) (*UserPersonalstatsResponse, error) {
+	var resp UserPersonalstatsResponse
+	if err := session.Get("user/personalstats", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u.Path = path.Join(u.Path, "user", "personalstats")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if len(t.Cat) > 0 && len(t.Cat) <= 10 {
-		categories := make([]string, len(t.Cat))
-		for i, category := range t.Cat {
-			categories[i] = string(category)
-		}
-		q.Set("cat", strings.Join(categories, ","))
-	} else if len(t.Cat) > 10 {
-		return "", fmt.Errorf("a maximum of 10 categories can be specified")
-	}
-
-	if t.Stat != "" {
-		q.Set("stat", string(t.Stat))
-	}
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

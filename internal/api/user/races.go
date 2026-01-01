@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -64,42 +63,31 @@ const (
 )
 
 type UserRacesParams struct {
-	Limit int
-	Sort  api.SortParams
-	api.RangeParams
-	Category UserRacesCategory
-	api.BaseParams
+	Limit     api.ApiLimit
+	Sort      api.ApiSort
+	From      api.ApiFrom
+	To        api.ApiTo
+	Category  UserRacesCategory
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateRacesURL(t *UserRacesParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserRacesParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "limit", int(p.Limit))
+	api.SetIfNotZero(q, "sort", string(p.Sort))
+	api.SetIfNotZero(q, "from", int(p.From))
+	api.SetIfNotZero(q, "to", int(p.To))
+	api.SetIfNotZero(q, "category", string(p.Category))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
+
+func GetRaces(session *api.Session, params *UserRacesParams) (*UserRacesResponse, error) {
+	var resp UserRacesResponse
+	if err := session.Get("user/races", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "races")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Category != "" {
-		q.Set("category", string(t.Category))
-	}
-
-	api.SetLimitParams(q, t.Limit, 20)
-
-	if err := api.SetRangeParams(q, t.From, t.To); err != nil {
-		return "", err
-	}
-
-	if t.Sort != "" {
-		q.Set("sort", string(t.Sort))
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

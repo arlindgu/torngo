@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -59,35 +58,23 @@ type UserProfileResponse struct {
 }
 
 type UserProfileParams struct {
-	Striptags bool
-	api.BaseParams
+	Striptags api.ApiStriptags
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateProfileURL(t *UserProfileParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
-	}
+func (p *UserProfileParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "striptags", fmt.Sprintf("%t", p.Striptags))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
 
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
+func GetProfile(session *api.Session, params *UserProfileParams) (*UserProfileResponse, error) {
+	var resp UserProfileResponse
+	if err := session.Get("user/profile", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u.Path = path.Join(u.Path, "user", "profile")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-	if t.Striptags {
-		q.Set("striptags", "1")
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

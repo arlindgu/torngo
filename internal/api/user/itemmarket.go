@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -44,36 +43,23 @@ type UserItemmarketResponse struct {
 }
 
 type UserItemmarketParams struct {
-	Offset int32
-	api.BaseParams
+	Offset    api.ApiOffset
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateItemmarketURL(t *UserItemmarketParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserItemmarketParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "offset", p.Offset)
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
+
+func GetItemmarket(session *api.Session, params *UserItemmarketParams) (*UserItemmarketResponse, error) {
+	var resp UserItemmarketResponse
+	if err := session.Get("user/itemmarket", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "itemmarket")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Offset != 0 {
-		q.Set("offset", fmt.Sprintf("%d", t.Offset))
-	}
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

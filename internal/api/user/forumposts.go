@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -37,41 +36,31 @@ type UserForumPostsResponse struct {
 }
 
 type UserForumPostsParams struct {
-	Striptags bool
-	Limit     int32
-	api.RangeParams
-	api.BaseParams
+	Striptags api.ApiStriptags
+	Limit     api.ApiLimit
+	From      api.ApiFrom
+	To        api.ApiTo
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateForumPostsURL(t *UserForumPostsParams) (string, error) {
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
+func (p *UserForumPostsParams) EncodeParams() url.Values {
+	q := url.Values{}
+
+	api.SetIfNotZero(q, "striptags", fmt.Sprintf("%v", p.Striptags))
+	api.SetIfNotZero(q, "limit", p.Limit)
+	api.SetIfNotZero(q, "from", p.From)
+	api.SetIfNotZero(q, "to", p.To)
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+
+	return q
+}
+
+func GetForumPosts(session *api.Session, params *UserForumPostsParams) (*UserForumPostsResponse, error) {
+	var resp UserForumPostsResponse
+	if err := session.Get("user/forumposts", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u.Path = path.Join(u.Path, "user", "battlestats")
-
-	q := u.Query()
-	if t.Striptags {
-		q.Set("striptags", fmt.Sprintf("%t", t.Striptags))
-	}
-
-	api.SetLimitParams(q, int(t.Limit), 20)
-
-	if err := api.SetRangeParams(q, t.From, t.To); err != nil {
-		return "", err
-	}
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	q.Set("key", t.APIKey)
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

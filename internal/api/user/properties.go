@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -68,37 +67,27 @@ const (
 )
 
 type UserPropertiesParams struct {
-	Filter UserPropertiesFilter
-	Offset int
-	Limit  int
-	api.BaseParams
+	Filter    UserPropertiesFilter
+	Offset    api.ApiOffset
+	Limit     api.ApiLimit
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreatePropertiesURL(t *UserPropertiesParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserPropertiesParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "filter", string(p.Filter))
+	api.SetIfNotZero(q, "offset", int(p.Offset))
+	api.SetIfNotZero(q, "limit", int(p.Limit))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
+
+func GetProperties(session *api.Session, params *UserPropertiesParams) (*UserPropertiesResponse, error) {
+	var resp UserPropertiesResponse
+	if err := session.Get("user/properties", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "properties")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Filter != "" {
-		q.Set("filter", string(t.Filter))
-	}
-
-	if t.Offset != 0 {
-		q.Set("offset", fmt.Sprintf("%d", t.Offset))
-	}
-
-	api.SetLimitParams(q, t.Limit, 20)
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

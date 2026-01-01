@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -48,41 +47,31 @@ const (
 )
 
 type UserForumThreadsParams struct {
-	api.BaseParams
-	Limit int32
-	api.RangeParams
-	Sort UserForumThreadsSort
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
+	Limit     api.ApiLimit
+	From      api.ApiFrom
+	To        api.ApiTo
+	Sort      api.ApiSort
 }
 
-func CreateForumThreadsURL(t *UserForumThreadsParams) (string, error) {
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
+func (p *UserForumThreadsParams) EncodeParams() url.Values {
+	q := url.Values{}
 
-	u.Path = path.Join(u.Path, "user", "forumthreads")
+	api.SetIfNotZero(q, "limit", p.Limit)
+	api.SetIfNotZero(q, "from", p.From)
+	api.SetIfNotZero(q, "to", p.To)
+	api.SetIfNotZero(q, "sort", string(p.Sort))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
 
-	q := u.Query()
-	q.Set("key", t.APIKey)
-	if t.Limit != 0 {
-		q.Set("limit", fmt.Sprintf("%d", t.Limit))
-	}
+	return q
+}
 
-	if err := api.SetRangeParams(q, t.From, t.To); err != nil {
-		return "", err
+func GetForumThreads(session *api.Session, params *UserForumThreadsParams) (*UserForumThreadsResponse, error) {
+	var resp UserForumThreadsResponse
+	if err := session.Get("user/forumthreads", params, &resp); err != nil {
+		return nil, err
 	}
-
-	if t.Sort != "" {
-		q.Set("sort", string(t.Sort))
-	}
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

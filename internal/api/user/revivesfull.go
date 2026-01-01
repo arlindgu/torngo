@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -43,54 +42,33 @@ const (
 )
 
 type UserRevivesFullParams struct {
-	Filter UserRevivesFullFilter
-	Limit  int
-	Sort   api.SortParams
-	api.RangeParams
-	Striptags bool
-	api.BaseParams
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
+	To        api.ApiTo
+	From      api.ApiFrom
+	Limit     api.ApiLimit
+	Filter    UserRevivesFullFilter
+	Sort      api.ApiSort
+	Striptags api.ApiStriptags
 }
 
-func CreateRevivesFullURL(t *UserRevivesFullParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserRevivesFullParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "filter", string(p.Filter))
+	api.SetIfNotZero(q, "limit", int(p.Limit))
+	api.SetIfNotZero(q, "sort", string(p.Sort))
+	api.SetIfNotZero(q, "to", int(p.To))
+	api.SetIfNotZero(q, "from", int(p.From))
+	api.SetIfNotZero(q, "striptags", fmt.Sprintf("%v", p.Striptags))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
+
+func GetRevivesFull(session *api.Session, params *UserRevivesFullParams) (*UserRevivesFullResponse, error) {
+	var resp UserRevivesFullResponse
+	if err := session.Get("user/revives", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "revives")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Filter != "" {
-		q.Set("filter", string(t.Filter))
-	}
-
-	api.SetLimitParams(q, t.Limit, 20)
-
-	if err := api.SetRangeParams(q, t.From, t.To); err != nil {
-		return "", err
-	}
-
-	if t.Sort != "" {
-		q.Set("sort", string(t.Sort))
-	}
-
-	if t.Striptags {
-		q.Set("striptags", "true")
-	}
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

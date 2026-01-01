@@ -1,11 +1,8 @@
 package user
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -22,57 +19,21 @@ type UserAmmoResponse struct {
 }
 
 type UserAmmoParams struct {
-	api.BaseParams
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateAmmoURL(t *UserAmmoParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
-	}
-
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "ammo")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+func (p *UserAmmoParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
 }
 
-func GetAmmo(t *UserAmmoParams) (*UserAmmoResponse, error) {
-	url, err := CreateAmmoURL(t)
-	if err != nil {
+func GetAmmo(session *api.Session, params *UserAmmoParams) (*UserAmmoResponse, error) {
+	var resp UserAmmoResponse
+	if err := session.Get("user/ammo", params, &resp); err != nil {
 		return nil, err
 	}
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-
-	var ammoResp UserAmmoResponse
-	var errorResp api.ErrorResponse
-	if err := json.NewDecoder(resp.Body).Decode(&errorResp); err == nil && errorResp.Error.Code != 0 {
-		return nil, fmt.Errorf("API Error %d: %s", errorResp.Error.Code, errorResp.Error.Error)
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&ammoResp); err != nil {
-		return nil, err
-	}
-
-	return &ammoResp, nil
+	return &resp, nil
 }

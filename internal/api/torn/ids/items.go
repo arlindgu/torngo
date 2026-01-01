@@ -1,1 +1,46 @@
 package ids
+
+type TornIdsItemsResponse struct {
+	Items []struct {
+		ID            int64  `json:"id"`
+		Name          string `json:"name"`
+		Description   string `json:"description"`
+		Effect        string `json:"effect"`
+		Requirement   string `json:"requirement"`
+		Image         string `json:"image"`
+		Type          string `json:"type"`
+		SubType       string `json:"sub_type"`
+		IsMasked      bool   `json:"is_masked"`
+		IsTradable    bool   `json:"is_tradable"`
+		IsFoundInCity bool   `json:"is_found_in_city"`
+		Value         struct {
+			Vendor struct {
+				Country string `json:"country"`
+				Name    string `json:"name"`
+			} `json:"vendor"`
+			BuyPrice    int64 `json:"buy_price"`
+			SellPrice   int64 `json:"sell_price"`
+			MarketPrice int64 `json:"market_price"`
+		} `json:"value"`
+		Circulation int64 `json:"circulation"`
+		Details     struct {
+			StealthLevel float64 `json:"stealth_level"`
+			BaseStats    struct {
+				Damage   int `json:"damage"`
+				Accuracy int `json:"accuracy"`
+				Armor    int `json:"armor"`
+			} `json:"base_stats"`
+			Category string `json:"category"`
+			Ammo     struct {
+				ID             int    `json:"id"`
+				Name           string `json:"name"`
+				MagazineRounds int    `json:"magazine_rounds"`
+				RateOfFire     struct {
+					Minimum int `json:"minimum"`
+					Maximum int `json:"maximum"`
+				} `json:"rate_of_fire"`
+			} `json:"ammo"`
+			Mods []int `json:"mods"`
+		} `json:"details"`
+	} `json:"items"`
+}

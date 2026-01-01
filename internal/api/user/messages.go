@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -29,35 +28,29 @@ type UserMessagesResponse struct {
 }
 
 type UserMessagesParams struct {
-	Limit int
-	api.RangeParams
-	Sort api.SortParams
-	api.BaseParams
+	Limit     api.ApiLimit
+	From      api.ApiFrom
+	To        api.ApiTo
+	Sort      api.ApiSort
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateMessagesURL(t *UserMessagesParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserMessagesParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "limit", p.Limit)
+	api.SetIfNotZero(q, "from", p.From)
+	api.SetIfNotZero(q, "to", p.To)
+	api.SetIfNotZero(q, "sort", string(p.Sort))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
+
+func GetMessages(session *api.Session, params *UserMessagesParams) (*UserMessagesResponse, error) {
+	var resp UserMessagesResponse
+	if err := session.Get("user/messages", params, &resp); err != nil {
+		return nil, err
 	}
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "messages")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	api.SetLimitParams(q, t.Limit, 20)
-
-	if err := api.SetRangeParams(q, t.From, t.To); err != nil {
-		return "", err
-	}
-
-	if t.Sort != "" {
-		q.Set("sort", string(t.Sort))
-	}
-
-	return u.String(), nil
+	return &resp, nil
 }

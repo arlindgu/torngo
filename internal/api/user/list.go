@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -45,44 +44,30 @@ const (
 
 type UserListParams struct {
 	Cat       Category
-	Striptags bool
-	Limit     int
-	Offset    int
-	Sort      api.SortParams
-	api.BaseParams
+	Striptags api.ApiStriptags
+	Limit     api.ApiLimit
+	Offset    api.ApiOffset
+	Sort      api.ApiSort
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateListURL(t *UserListParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserListParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "cat", string(p.Cat))
+	api.SetIfNotZero(q, "striptags", fmt.Sprintf("%t", p.Striptags))
+	api.SetIfNotZero(q, "limit", p.Limit)
+	api.SetIfNotZero(q, "offset", p.Offset)
+	api.SetIfNotZero(q, "sort", string(p.Sort))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
+
+func GetList(session *api.Session, params *UserListParams) (*UserListResponse, error) {
+	var resp UserListResponse
+	if err := session.Get("user/list", params, &resp); err != nil {
+		return nil, err
 	}
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "list")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Cat != "" {
-		q.Set("cat", string(t.Cat))
-	}
-
-	api.SetLimitParams(q, t.Limit, 20)
-
-	if t.Sort != "" {
-		q.Set("sort", string(t.Sort))
-	}
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -42,50 +41,29 @@ const (
 )
 
 type UserReportsParams struct {
-	Cat    UserReportsCategory
-	Target int
-	Limit  int
-	Offset int
-	api.BaseParams
+	Cat       UserReportsCategory
+	Target    int
+	Limit     api.ApiLimit
+	Offset    api.ApiOffset
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateReportsURL(t *UserReportsParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserReportsParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "cat", string(p.Cat))
+	api.SetIfNotZero(q, "target", fmt.Sprintf("%d", p.Target))
+	api.SetIfNotZero(q, "limit", string(p.Limit))
+	api.SetIfNotZero(q, "offset", string(p.Offset))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
+
+func GetReports(session *api.Session, params *UserReportsParams) (*UserReportsResponse, error) {
+	var resp UserReportsResponse
+	if err := session.Get("user/reports", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "reports")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-
-	if t.Cat != "" {
-		q.Set("category", string(t.Cat))
-	}
-
-	if t.Target != 0 {
-		q.Set("target", fmt.Sprintf("%d", t.Target))
-	}
-
-	if t.Offset != 0 {
-		q.Set("offset", fmt.Sprintf("%d", t.Offset))
-	}
-
-	api.SetLimitParams(q, t.Limit, 20)
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

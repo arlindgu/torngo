@@ -3,8 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
-	"strings"
 	"torngo/internal/api"
 )
 
@@ -31,57 +29,35 @@ type UserLogResponse struct {
 }
 
 type UserLogParams struct {
-	Log    []int
-	Cat    int
-	Target int
-	Limit  int
-	api.RangeParams
-	api.BaseParams
+	Log       []int
+	Cat       int
+	Target    int
+	Limit     api.ApiLimit
+	From      api.ApiFrom
+	To        api.ApiTo
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateLogURL(t *UserLogParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserLogParams) EncodeParams() url.Values {
+	q := url.Values{}
+
+	api.SetIfNotZero(q, "log", fmt.Sprintf("%v", p.Log))
+	api.SetIfNotZero(q, "cat", p.Cat)
+	api.SetIfNotZero(q, "target", p.Target)
+	api.SetIfNotZero(q, "limit", p.Limit)
+	api.SetIfNotZero(q, "from", p.From)
+	api.SetIfNotZero(q, "to", p.To)
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+
+	return q
+}
+
+func GetLog(session *api.Session, params *UserLogParams) (*UserLogResponse, error) {
+	var resp UserLogResponse
+	if err := session.Get("user/log", params, &resp); err != nil {
+		return nil, err
 	}
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "log")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if len(t.Log) > 0 {
-		var logValues []string
-		for _, l := range t.Log {
-			logValues = append(logValues, fmt.Sprintf("%d", l))
-		}
-		q.Set("log", strings.Join(logValues, ","))
-	}
-
-	if t.Cat != 0 {
-		q.Set("cat", fmt.Sprintf("%d", t.Cat))
-	}
-
-	if t.Target != 0 {
-		q.Set("target", fmt.Sprintf("%d", t.Target))
-	}
-
-	api.SetLimitParams(q, t.Limit, 20)
-
-	if err := api.SetRangeParams(q, t.From, t.To); err != nil {
-		return "", err
-	}
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

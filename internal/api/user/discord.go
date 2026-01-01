@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -15,31 +14,23 @@ type UserDiscordResponse struct {
 }
 
 type UserDiscordParams struct {
-	api.BaseParams
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateDiscordURL(t *UserDiscordParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserDiscordParams) EncodeParams() url.Values {
+	q := url.Values{}
+
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+
+	return q
+}
+
+func GetDiscord(session *api.Session, params *UserDiscordParams) (*UserDiscordResponse, error) {
+	var resp UserDiscordResponse
+	if err := session.Get("user/discord", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "discord")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -16,31 +15,21 @@ type UserSkillsResponse struct {
 }
 
 type UserSkillsParams struct {
-	api.BaseParams
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateSkillsURL(t *UserSkillsParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
+func (p *UserSkillsParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
+
+func GetSkills(session *api.Session, params *UserSkillsParams) (*UserSkillsResponse, error) {
+	var resp UserSkillsResponse
+	if err := session.Get("user/skills", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
-	}
-
-	u.Path = path.Join(u.Path, "user", "skills")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

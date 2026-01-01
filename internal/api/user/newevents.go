@@ -3,7 +3,6 @@ package user
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"torngo/internal/api"
 )
 
@@ -16,35 +15,23 @@ type UserNewEventsResponse struct {
 }
 
 type UserNewEventsParams struct {
-	Striptags bool
-	api.BaseParams
+	Striptags api.ApiStriptags
+	Comment   api.ApiComment
+	Timestamp api.ApiTimestamp
 }
 
-func CreateNewEventsURL(t *UserNewEventsParams) (string, error) {
-	if t.APIKey == "" {
-		return "", fmt.Errorf("APIKey is required")
-	}
+func (p *UserNewEventsParams) EncodeParams() url.Values {
+	q := url.Values{}
+	api.SetIfNotZero(q, "striptags", fmt.Sprintf("%v", p.Striptags))
+	api.SetIfNotZero(q, "timestamp", fmt.Sprintf("%d", p.Timestamp))
+	api.SetIfNotZero(q, "comment", string(p.Comment))
+	return q
+}
 
-	u, err := url.Parse(api.APIBaseURL)
-	if err != nil {
-		return "", err
+func GetNewEvents(session *api.Session, params *UserNewEventsParams) (*UserNewEventsResponse, error) {
+	var resp UserNewEventsResponse
+	if err := session.Get("user/newevents", params, &resp); err != nil {
+		return nil, err
 	}
-
-	u.Path = path.Join(u.Path, "user", "newevents")
-
-	q := u.Query()
-	q.Set("key", t.APIKey)
-
-	if t.Timestamp != 0 {
-		q.Set("timestamp", fmt.Sprintf("%d", t.Timestamp))
-	}
-	if t.Comment != "" {
-		q.Set("comment", t.Comment)
-	}
-	if t.Striptags {
-		q.Set("striptags", fmt.Sprintf("%t", t.Striptags))
-	}
-
-	u.RawQuery = q.Encode()
-	return u.String(), nil
+	return &resp, nil
 }

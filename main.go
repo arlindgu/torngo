@@ -10,8 +10,8 @@ func main() {
 	session := api.NewSession("cl8xxMu2j7GkLdKT")
 
 	params := &user.UserBasicIdParams{
-		DiscordId: 714144254003249263,
-		Comment:   "Fetching basic user info",
+		Id:      12,
+		Comment: "Fetching basic user info",
 	}
 	basicResponse, err := user.GetBasicId(session, params)
 	fmt.Println(basicResponse.Profile.Name, err)

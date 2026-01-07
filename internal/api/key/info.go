@@ -5,7 +5,6 @@ import (
 )
 
 type KeyInfoResponse struct {
-	*api.ErrorResponse
 	Info struct {
 		Selections struct {
 			Company  []string `json:"company"`

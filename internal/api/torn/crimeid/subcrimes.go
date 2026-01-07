@@ -7,3 +7,4 @@ type TornCrimeIdSubcrimesResponse struct {
 		NerveCost int    `json:"nerve_cost"`
 	} `json:"subcrimes"`
 }
+

@@ -45,7 +45,8 @@ type UserRacesResponse struct {
 			RaceTime    float64 `json:"race_time"`
 			TimeEnded   int     `json:"time_ended"`
 		} `json:"results"`
-		IsOfficial bool `json:"is_official"`
+		IsOfficial bool    `json:"is_official"`
+		SkillGain  float64 `json:"skill_gain"`
 	} `json:"races"`
 	Metadata struct {
 		Links struct {

@@ -42,4 +42,3 @@ type ForumThreadsParams struct {
 	Timestamp api.ApiTimestamp
 	Comment   api.ApiComment
 }
-
